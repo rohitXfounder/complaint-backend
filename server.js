@@ -1,5 +1,3 @@
-const cors = require("cors");
-app.use(cors());
 console.log("STARTING SERVER...");
 
 const express = require("express");
