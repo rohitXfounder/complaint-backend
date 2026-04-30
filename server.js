@@ -1,253 +1,172 @@
+// ==============================
+// 🚀 STARTING SERVER
+// ==============================
 console.log("STARTING SERVER...");
 
 const express = require("express");
-const mysql = require("mysql2");
 const cors = require("cors");
+const mongoose = require("mongoose");
 const multer = require("multer");
 const path = require("path");
-
-const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        cb(null, "uploads/");
-    },
-    filename: function (req, file, cb) {
-        cb(null, Date.now() + path.extname(file.originalname));
-    }
-});
-
-const upload = multer({ storage: storage });
 
 const app = express();
 
 // ==============================
-// MIDDLEWARE
+// 🔧 MIDDLEWARE
 // ==============================
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use("/uploads", express.static("uploads"));
 
-
 // ==============================
-// MYSQL CONNECTION
+// 📁 IMAGE UPLOAD
 // ==============================
-const db = mysql.createConnection({
-    host: "localhost",
-    user: "root",
-    password: "@Rohit9699",
-    database: "bolcampus"
-});
-
-db.connect(err => {
-    if (err) {
-        console.log("❌ DB Connection Failed:", err);
-    } else {
-        console.log("✅ Connected to MySQL");
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, "uploads/");
+    },
+    filename: (req, file, cb) => {
+        cb(null, Date.now() + path.extname(file.originalname));
     }
 });
 
+const upload = multer({ storage });
 
 // ==============================
-// 🔔 NOTIFICATION FUNCTION (CORE FIX)
+// 🌐 MONGODB CONNECTION
 // ==============================
-function addNotification(message, type) {
+mongoose.connect("mongodb+srv://admin:@Rohit969931@cluster0.16gcy34.mongodb.net/bolcampus?retryWrites=true&w=majority")
+.then(() => console.log("✅ MongoDB Connected"))
+.catch(err => console.log("❌ DB Error:", err));
 
-    console.log("🔔 Notification:", message);
+// ==============================
+// 📦 SCHEMAS
+// ==============================
 
-    const sql = "INSERT INTO notifications (message, type) VALUES (?, ?)";
+// Complaint Schema
+const complaintSchema = new mongoose.Schema({
+    id: String,
+    name: String,
+    branch: String,
+    division: String,
+    roll: String,
+    issue: String,
+    description: String,
+    status: String,
+    createdAt: String,
+    imagePath: String
+});
 
-    db.query(sql, [message, type], (err) => {
-        if (err) {
-            console.log("❌ Notification error:", err);
-        }
-    });
+const Complaint = mongoose.model("Complaint", complaintSchema);
+
+// Notification Schema
+const notificationSchema = new mongoose.Schema({
+    message: String,
+    type: String,
+    createdAt: {
+        type: Date,
+        default: Date.now
+    }
+});
+
+const Notification = mongoose.model("Notification", notificationSchema);
+
+// ==============================
+// 🔔 NOTIFICATION FUNCTION
+// ==============================
+async function addNotification(message, type) {
+    try {
+        await Notification.create({ message, type });
+        console.log("🔔 Notification:", message);
+    } catch (err) {
+        console.log("❌ Notification error:", err);
+    }
 }
-
 
 // ==============================
 // 🔐 ADMIN LOGIN
 // ==============================
+// (Simple version without DB)
 app.post("/admin-login", (req, res) => {
-
     const { password } = req.body;
 
-    const sql = "SELECT * FROM admin WHERE password = ? LIMIT 1";
-
-    db.query(sql, [password], (err, result) => {
-
-        if (err) {
-            console.log(err);
-            return res.json({ success: false });
-        }
-
-        if (result.length > 0) {
-            res.json({ success: true });
-        } else {
-            res.json({ success: false });
-        }
-    });
-});
-
-
-// ==============================
-// 📌 ADD COMPLAINT
-// ==============================
-app.post("/add", upload.single("image"), (req, res) => {
-
-    const {
-        id,
-        name,
-        branch,
-        division,
-        roll,
-        issue,
-        description,
-        status,
-        createdAt
-    } = req.body;
-
-    const imagePath = req.file ? req.file.filename : null;
-
-    const sql = `
-        INSERT INTO complaints 
-        (id, name, branch, division, roll, issue, description, status, createdAt, imagePath)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `;
-
-    db.query(sql, [
-        id,
-        name,
-        branch,
-        division,
-        roll,
-        issue,
-        description,
-        status,
-        createdAt,
-        imagePath
-    ], (err) => {
-
-        if (err) {
-            console.log("❌ INSERT ERROR:", err);
-            return res.status(500).send("Insert failed");
-        }
-
-        console.log("✅ Complaint inserted with image");
-        res.send("Inserted");
-    });
-});
-
-
-// ==============================
-// 📌 GET SINGLE COMPLAINT
-// ==============================
-app.get("/get/:id", (req, res) => {
-
-    db.query(
-        "SELECT * FROM complaints WHERE id = ?",
-        [req.params.id],
-        (err, result) => {
-
-            if (err) return res.send("Error");
-
-            res.json(result);
-        }
-    );
-});
-
-
-// ==============================
-// 📌 GET ALL COMPLAINTS
-// ==============================
-app.get("/all", (req, res) => {
-
-    db.query("SELECT * FROM complaints", (err, result) => {
-
-        if (err) return res.send("Error");
-
-        res.json(result);
-    });
-});
-
-
-// ==============================
-// 🔍 FILTER COMPLAINTS
-// ==============================
-app.get("/filter", (req, res) => {
-
-    const search = req.query.search || "";
-    const status = req.query.status || "All";
-
-    let sql = "SELECT * FROM complaints WHERE (id LIKE ? OR name LIKE ?)";
-    let values = [`%${search}%`, `%${search}%`];
-
-    if (status !== "All") {
-        sql += " AND status = ?";
-        values.push(status);
+    if (password === "admin123") {
+        res.json({ success: true });
+    } else {
+        res.json({ success: false });
     }
-
-    db.query(sql, values, (err, result) => {
-
-        if (err) return res.send("Error");
-
-        res.json(result);
-    });
 });
 
+// ==============================
+// ➕ ADD COMPLAINT
+// ==============================
+app.post("/add", upload.single("image"), async (req, res) => {
+    try {
+        const newComplaint = new Complaint({
+            ...req.body,
+            imagePath: req.file ? req.file.filename : null
+        });
+
+        await newComplaint.save();
+
+        res.send("Inserted");
+    } catch (err) {
+        console.log("❌ INSERT ERROR:", err);
+        res.status(500).send("Insert failed");
+    }
+});
+
+// ==============================
+// 🔍 GET SINGLE
+// ==============================
+app.get("/get/:id", async (req, res) => {
+    const data = await Complaint.find({ id: req.params.id });
+    res.json(data);
+});
+
+// ==============================
+// 📄 GET ALL
+// ==============================
+app.get("/all", async (req, res) => {
+    const data = await Complaint.find().sort({ _id: -1 });
+    res.json(data);
+});
 
 // ==============================
 // 🔄 UPDATE STATUS
 // ==============================
-app.put("/update/:id", (req, res) => {
-
+app.put("/update/:id", async (req, res) => {
     const { status } = req.body;
 
-    const sql = "UPDATE complaints SET status = ? WHERE id = ?";
+    await Complaint.updateOne(
+        { id: req.params.id },
+        { status }
+    );
 
-    db.query(sql, [status, req.params.id], (err) => {
+    await addNotification(`Status updated for ${req.params.id}`, "UPDATE");
 
-        if (err) return res.send("Error updating");
-
-        addNotification(`Status updated for ${req.params.id}`, "UPDATE");
-
-        res.send("Updated");
-    });
+    res.send("Updated");
 });
 
-
 // ==============================
-// 🗑️ DELETE COMPLAINT
+// 🗑️ DELETE
 // ==============================
-app.delete("/delete/:id", (req, res) => {
+app.delete("/delete/:id", async (req, res) => {
+    await Complaint.deleteOne({ id: req.params.id });
 
-    const sql = "DELETE FROM complaints WHERE id = ?";
+    await addNotification(`Complaint deleted: ${req.params.id}`, "DELETE");
 
-    db.query(sql, [req.params.id], (err) => {
-
-        if (err) return res.send("Error deleting");
-
-        addNotification(`Complaint deleted: ${req.params.id}`, "DELETE");
-
-        res.send("Deleted");
-    });
+    res.send("Deleted");
 });
-
 
 // ==============================
 // 🔔 GET NOTIFICATIONS
 // ==============================
-app.get("/notifications", (req, res) => {
-
-    db.query(
-        "SELECT * FROM notifications ORDER BY id DESC LIMIT 10",
-        (err, result) => {
-
-            if (err) return res.send("Error");
-
-            res.json(result);
-        }
-    );
+app.get("/notifications", async (req, res) => {
+    const data = await Notification.find().sort({ _id: -1 }).limit(10);
+    res.json(data);
 });
-
 
 // ==============================
 // 🚀 START SERVER
