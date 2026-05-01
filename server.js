@@ -12,6 +12,15 @@ const path = require("path");
 const app = express();
 
 // ==============================
+// 📁 DIRECTORY SETUP
+// ==============================
+// This ensures the 'uploads' folder exists on Render so image uploads don't crash the server
+const uploadDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir);
+}
+
+// ==============================
 // 🔧 MIDDLEWARE
 // ==============================
 app.use(cors());
