@@ -36,8 +36,7 @@ const upload = multer({ storage });
 // ==============================
 // 🌐 MONGODB CONNECTION
 // ==============================
-mongoose.connect("mongodb+srv://admin:@Rohit969931@cluster0.16gcy34.mongodb.net/bolcampus?retryWrites=true&w=majority")
-.then(() => console.log("✅ MongoDB Connected"))
+mongoose.connect("mongodb+srv://admin:@Rohit969931@cluster0.16gcy34.mongodb.net/complaintsDB?retryWrites=true&w=majority")
 .catch(err => console.log("❌ DB Error:", err));
 
 // ==============================
