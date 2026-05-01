@@ -8,8 +8,7 @@ const cors = require("cors");
 const mongoose = require("mongoose");
 const multer = require("multer");
 const path = require("path");
-
-const app = express();
+const fs = require("fs");
 
 // ==============================
 // 📁 DIRECTORY SETUP
@@ -19,6 +18,8 @@ const uploadDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir);
 }
+
+const app = express();
 
 // ==============================
 // 🔧 MIDDLEWARE
