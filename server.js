@@ -98,7 +98,7 @@ async function addNotification(message, type) {
 app.post("/admin-login", (req, res) => {
     const { password } = req.body;
 
-    if (password === "admin123") {
+    if (password === "bolcampus-login") {
         res.json({ success: true });
     } else {
         res.json({ success: false });
