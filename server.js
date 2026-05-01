@@ -33,10 +33,8 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-// ==============================
-// 🌐 MONGODB CONNECTION
-// ==============================
-mongoose.connect("mongodb+srv://admin:@Rohit969931@cluster0.16gcy34.mongodb.net/complaintsDB?retryWrites=true&w=majority")
+mongoose.connect(process.env.MONGO_URI)
+.then(() => console.log("✅ MongoDB Connected"))
 .catch(err => console.log("❌ DB Error:", err));
 
 // ==============================
