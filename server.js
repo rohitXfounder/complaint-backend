@@ -10,6 +10,7 @@ const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
 
+
 // ==============================
 // 📁 DIRECTORY SETUP
 // ==============================
@@ -43,6 +44,9 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
+// ==============================
+// 🌐 MONGODB CONNECTION
+// ==============================
 mongoose.connect(process.env.MONGO_URI)
 .then(() => console.log("✅ MongoDB Connected"))
 .catch(err => console.log("❌ DB Error:", err));
@@ -60,8 +64,8 @@ const complaintSchema = new mongoose.Schema({
     roll: String,
     issue: String,
     description: String,
-    status: String,
-    createdAt: String,
+    status: { type: String, default: "Pending" }, // Set default to Pending
+    createdAt: { type: Date, default: Date.now }, // Change String to Date
     imagePath: String
 });
 
@@ -111,16 +115,23 @@ app.post("/admin-login", (req, res) => {
 app.post("/add", upload.single("image"), async (req, res) => {
     try {
         const newComplaint = new Complaint({
-            ...req.body,
+            id: req.body.id,
+            name: req.body.name,
+            branch: req.body.branch,
+            division: req.body.division,
+            roll: req.body.roll,
+            issue: req.body.issue,
+            description: req.body.description,
+            status: req.body.status || "Pending",
             imagePath: req.file ? req.file.filename : null
+            // createdAt is handled automatically by the Schema default
         });
 
         await newComplaint.save();
-
-        res.send("Inserted");
+        res.status(200).send("Inserted Successfully");
     } catch (err) {
-        console.log("❌ INSERT ERROR:", err);
-        res.status(500).send("Insert failed");
+        console.error("❌ INSERT ERROR:", err);
+        res.status(500).send("Insert failed: " + err.message);
     }
 });
 
@@ -136,35 +147,46 @@ app.get("/get/:id", async (req, res) => {
 // 📄 GET ALL
 // ==============================
 app.get("/all", async (req, res) => {
-    const data = await Complaint.find().sort({ _id: -1 });
-    res.json(data);
+    try {
+        const data = await Complaint.find().sort({ _id: -1 });
+        res.json(data);
+    } catch (error) {
+        console.error("Error fetching complaints:", error);
+        res.status(500).json({ success: false, message: "Server error" });
+    }
 });
 
-// ==============================
-// 🔄 UPDATE STATUS
+/// ==============================
+// 🔄 UPDATE STATUS (Added Error Handling)
 // ==============================
 app.put("/update/:id", async (req, res) => {
-    const { status } = req.body;
+    try {
+        const { status } = req.body;
+        const result = await Complaint.updateOne(
+            { id: req.params.id },
+            { status }
+        );
+        
+        if (result.matchedCount === 0) return res.status(404).send("Not Found");
 
-    await Complaint.updateOne(
-        { id: req.params.id },
-        { status }
-    );
-
-    await addNotification(`Status updated for ${req.params.id}`, "UPDATE");
-
-    res.send("Updated");
+        await addNotification(`Status updated for ${req.params.id}`, "UPDATE");
+        res.send("Updated");
+    } catch (err) {
+        res.status(500).send("Update failed");
+    }
 });
 
 // ==============================
-// 🗑️ DELETE
+// 🗑️ DELETE (Added Error Handling)
 // ==============================
 app.delete("/delete/:id", async (req, res) => {
-    await Complaint.deleteOne({ id: req.params.id });
-
-    await addNotification(`Complaint deleted: ${req.params.id}`, "DELETE");
-
-    res.send("Deleted");
+    try {
+        await Complaint.deleteOne({ id: req.params.id });
+        await addNotification(`Complaint deleted: ${req.params.id}`, "DELETE");
+        res.send("Deleted");
+    } catch (err) {
+        res.status(500).send("Delete failed");
+    }
 });
 
 // ==============================
